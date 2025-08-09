@@ -1,0 +1,40 @@
+{
+  "name": "drive-api",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler types && wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "types": "wrangler types",
+    "test": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs",
+    "test:ui": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs --ui",
+    "test:run": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run",
+    "test:coverage": "node --max-old-space-size=16384 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage",
+    "test:coverage:upload-single1": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should upload file successfully\"",
+    "test:coverage:upload-single2": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should handle token refresh failure\"",
+    "test:coverage:upload-single3": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should handle missing access token\"",
+    "test:coverage:upload-pair1": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should upload file successfully|should handle token refresh failure\"",
+    "test:coverage:upload-pair2": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should handle invalid folder ID|should handle unauthorized folder\"",
+    "test:coverage:upload-triple": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should validate custom folder ID|should handle overwrite with existing file|should handle overwrite with no existing file\"",
+    "test:coverage:upload-high": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should handle upload API failure|should handle general exception|should handle search failure during overwrite\"",
+    "test:coverage:upload-max": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should upload file successfully|should validate custom folder ID|should handle overwrite with existing file|should handle upload API failure\"",
+    "test:unit": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run test/unit",
+    "test:integration": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run test/integration",
+    "test:e2e": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run test/crud.test.js"
+  },
+  "dependencies": {
+    "@hono/swagger-ui": "^0.5.2",
+    "@hono/zod-openapi": "^1.1.0",
+    "hono": "^4.8.12",
+    "zod": "^4.0.15"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.60",
+    "@types/node": "^24.2.0",
+    "@vitest/coverage-istanbul": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "miniflare": "^4.20250803.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.4.0"
+  }
+}

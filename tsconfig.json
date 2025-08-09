@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": [
+      "node",
+      "@cloudflare/vitest-pool-workers",
+      "./worker-configuration"
+    ]
+  },
+  "include": [
+    "src/api/drive/*",
+    "src/api/drive/folder/*",
+    "src/schema/*",
+    "test/**/*"
+  ]
+}
