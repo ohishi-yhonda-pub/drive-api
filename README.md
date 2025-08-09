@@ -117,6 +117,11 @@ test/
 - **統合テスト**: API エンドポイントをエンドツーエンドでテスト
 - **カバレッジレポート**: Istanbul で生成し、GitHub Pages にデプロイ
 
+### 📊 テストカバレッジレポート
+
+最新のテストカバレッジレポートは以下で確認できます：
+**[https://ohishi-yhonda-org.github.io/drive-api/](https://ohishi-yhonda-org.github.io/drive-api/)**
+
 ## 🔐 セキュリティ
 
 - Google との OAuth 2.0 認証
