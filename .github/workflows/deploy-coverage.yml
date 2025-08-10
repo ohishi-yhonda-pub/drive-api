@@ -24,22 +24,6 @@ jobs:
       
       - name: Remove sensitive files and push to public
         run: |
-          # Use full path to Git
-          $git = "C:\Program Files\Git\cmd\git.exe"
-          
-          # Get current directory
-          $currentDir = Get-Location
-          
-          # Create temporary directory
-          $tempDir = Join-Path $env:TEMP ("git-sync-" + (Get-Date -Format "yyyyMMddHHmmss"))
-          New-Item -ItemType Directory -Path $tempDir -Force
-          
-          # Clone repository
-          & $git clone $currentDir $tempDir
-          
-          # Change to temp directory
-          Set-Location $tempDir
-          
           # Get list of files marked for encryption in .gitattributes
           $encryptedFiles = @()
           if (Test-Path .gitattributes) {
@@ -50,25 +34,23 @@ jobs:
             }
           }
           
-          # Remove encrypted files and .gitattributes from working directory
+          # Create a new branch for public repository
+          git checkout -b public-main
+          
+          # Remove encrypted files and .gitattributes
           foreach ($file in $encryptedFiles) {
             if (Test-Path $file) {
-              Remove-Item $file -Force
+              git rm $file -f 2>$null
             }
           }
-          Remove-Item .gitattributes -Force -ErrorAction SilentlyContinue
+          git rm .gitattributes -f 2>$null
           
           # Commit the removal
-          & $git add -A
-          & $git commit -m "Remove sensitive files for public repository" 2>$null
+          git commit -m "Remove sensitive files for public repository" 2>$null || echo "No changes to commit"
           
           # Add public remote and push
-          & $git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
-          & $git push public HEAD:main --force
-          
-          # Cleanup
-          Set-Location $currentDir
-          Remove-Item -Recurse -Force $tempDir
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git 2>$null || git remote set-url public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
+          git push public public-main:main --force
 
   deploy-coverage:
     needs: sync-to-public
