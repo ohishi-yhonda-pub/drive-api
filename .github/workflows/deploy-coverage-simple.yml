@@ -8,7 +8,7 @@ on:
 
 jobs:
   sync-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64, test]
     steps:
       # Sync private to public repository
       - name: Sync to public repository
