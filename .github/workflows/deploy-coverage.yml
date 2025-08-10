@@ -30,16 +30,6 @@ jobs:
           Write-Host "Directory contents:"
           Get-ChildItem -Force | Select-Object Name, Mode
           
-          # Check if .git directory exists
-          if (Test-Path .git) {
-            Write-Host ".git directory exists"
-          } else {
-            Write-Host ".git directory NOT found - initializing repository"
-            git init
-            git remote add origin https://github.com/ohishi-yhonda-org/drive-api.git
-            git fetch origin
-            git checkout -f main
-          }
           
           # Get list of files marked for encryption in .gitattributes
           $encryptedFiles = @()
@@ -87,8 +77,13 @@ jobs:
           }
           
           # Push to public repository
-          git push public temp-public-sync:main --force
-          Write-Host "Successfully pushed to public repository"
+          try {
+            git push public temp-public-sync:main --force
+            Write-Host "Successfully pushed to public repository"
+          } catch {
+            Write-Host "Push failed: $_"
+            exit 1
+          }
 
   deploy-coverage:
     needs: sync-to-public
