@@ -136,7 +136,7 @@ jobs:
           }
           
           # Start Wrangler and generate OpenAPI
-          $wranglerProcess = Start-Process -FilePath "npx" -ArgumentList "wrangler", "dev", "--port", "8787", "--local" -PassThru -NoNewWindow
+          $wranglerProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npx wrangler dev --port 8787 --local" -PassThru -NoNewWindow
           Start-Sleep -Seconds 5
           
           # Wait for server and fetch OpenAPI
