@@ -27,10 +27,18 @@ jobs:
           # Use full path to Git
           $git = "C:\Program Files\Git\cmd\git.exe"
           
-          # Clone to temporary directory to preserve commit history
-          $tempDir = New-TemporaryFile | %{ rm $_; mkdir $_ }
-          & $git clone . $tempDir
-          cd $tempDir
+          # Get current directory
+          $currentDir = Get-Location
+          
+          # Create temporary directory
+          $tempDir = Join-Path $env:TEMP ("git-sync-" + (Get-Date -Format "yyyyMMddHHmmss"))
+          New-Item -ItemType Directory -Path $tempDir -Force
+          
+          # Clone repository
+          & $git clone $currentDir $tempDir
+          
+          # Change to temp directory
+          Set-Location $tempDir
           
           # Get list of files marked for encryption in .gitattributes
           $encryptedFiles = @()
@@ -42,22 +50,24 @@ jobs:
             }
           }
           
-          # Remove encrypted files from all commits
-          $filterCommand = "& '$git' filter-branch --force --index-filter '"
+          # Remove encrypted files and .gitattributes from working directory
           foreach ($file in $encryptedFiles) {
-            $filterCommand += "git rm --cached --ignore-unmatch $file; "
+            if (Test-Path $file) {
+              Remove-Item $file -Force
+            }
           }
-          $filterCommand += "git rm --cached --ignore-unmatch .gitattributes"
-          $filterCommand += "' --prune-empty --tag-name-filter cat -- --all"
+          Remove-Item .gitattributes -Force -ErrorAction SilentlyContinue
           
-          Invoke-Expression $filterCommand
+          # Commit the removal
+          & $git add -A
+          & $git commit -m "Remove sensitive files for public repository" 2>$null
           
           # Add public remote and push
           & $git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
-          & $git push public main --force
+          & $git push public HEAD:main --force
           
           # Cleanup
-          cd ..
+          Set-Location $currentDir
           Remove-Item -Recurse -Force $tempDir
 
   deploy-coverage:
