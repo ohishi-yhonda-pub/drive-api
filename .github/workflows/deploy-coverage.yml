@@ -166,9 +166,18 @@ jobs:
           Copy-Item -Recurse coverage/* gh-pages/coverage/
           
           # Copy API documentation to root
+          Write-Host "Checking for docs directory..."
           if (Test-Path docs) {
+            Write-Host "docs directory found. Contents:"
+            Get-ChildItem docs
             Copy-Item -Recurse docs/* gh-pages/
+          } else {
+            Write-Host "docs directory NOT found"
           }
+          
+          # List gh-pages contents
+          Write-Host "gh-pages directory contents:"
+          Get-ChildItem gh-pages -Recurse | Select-Object FullName
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
