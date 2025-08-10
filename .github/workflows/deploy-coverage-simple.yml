@@ -115,6 +115,9 @@ jobs:
         if: steps.check-bash.outputs.bash_available == 'false'
         shell: powershell
         run: |
+          # Add Git and Node.js to PATH
+          $env:PATH = "C:\Program Files\Git\cmd;C:\Program Files\nodejs;$env:PATH"
+          
           # Create temp directory
           $tempDir = Join-Path $env:TEMP ("deploy-" + (Get-Date -Format "yyyyMMddHHmmss"))
           New-Item -ItemType Directory -Path $tempDir -Force
