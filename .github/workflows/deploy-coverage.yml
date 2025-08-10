@@ -16,7 +16,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
           
-      - name: Clone and Sync to Public
+      - name: Sync to Public Repository
         run: |
           # Set Git path
           $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
@@ -24,11 +24,6 @@ jobs:
           # Configure git
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          
-          # Clone private repo to temp directory
-          $tempDir = Join-Path $env:TEMP ("sync-" + (Get-Date -Format "yyyyMMddHHmmss"))
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ohishi-yhonda-org/drive-api.git $tempDir
-          cd $tempDir
           
           # Get list of files to remove from .gitattributes
           $filesToRemove = @()
@@ -61,10 +56,6 @@ jobs:
           # Add public remote and push
           git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
           git push public HEAD:main --force
-          
-          # Cleanup
-          cd ..
-          Remove-Item -Recurse -Force $tempDir
 
   deploy-coverage:
     needs: sync-to-public
