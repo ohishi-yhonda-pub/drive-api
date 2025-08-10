@@ -11,7 +11,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64, test]
     steps:
       - name: Process and Deploy
-        shell: pwsh
+        shell: bash
         run: |
           # Create temp directory
           $tempDir = Join-Path $env:TEMP ("deploy-" + (Get-Date -Format "yyyyMMddHHmmss"))
