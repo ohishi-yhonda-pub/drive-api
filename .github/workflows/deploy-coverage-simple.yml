@@ -10,7 +10,21 @@ jobs:
   generate-and-deploy:
     runs-on: [self-hosted, Windows, X64, test]
     steps:
-      - name: Process and Deploy
+      - name: Check bash availability
+        id: check-bash
+        shell: powershell
+        run: |
+          try {
+            $bashPath = (Get-Command bash -ErrorAction Stop).Source
+            Write-Host "Bash found at: $bashPath"
+            echo "bash_available=true" >> $env:GITHUB_OUTPUT
+          } catch {
+            Write-Host "Bash not found, will use PowerShell"
+            echo "bash_available=false" >> $env:GITHUB_OUTPUT
+          }
+      
+      - name: Process and Deploy (Bash)
+        if: steps.check-bash.outputs.bash_available == 'true'
         shell: bash
         run: |
           # Create temp directory
@@ -96,3 +110,96 @@ jobs:
           # Cleanup
           cd /tmp
           rm -rf "$tempDir"
+      
+      - name: Process and Deploy (PowerShell)
+        if: steps.check-bash.outputs.bash_available == 'false'
+        shell: powershell
+        run: |
+          # Create temp directory
+          $tempDir = Join-Path $env:TEMP ("deploy-" + (Get-Date -Format "yyyyMMddHHmmss"))
+          New-Item -ItemType Directory -Path $tempDir -Force
+          cd $tempDir
+          
+          # Clone private repository
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ohishi-yhonda-org/drive-api.git private
+          cd private
+          
+          # Install dependencies
+          npm ci
+          
+          # Copy template for Wrangler
+          if (Test-Path .dev.vars.template) {
+            Copy-Item .dev.vars.template .dev.vars
+          }
+          
+          # Start Wrangler and generate OpenAPI
+          $wranglerProcess = Start-Process -FilePath "npx" -ArgumentList "wrangler", "dev", "--port", "8787", "--local" -PassThru -NoNewWindow
+          Start-Sleep -Seconds 5
+          
+          # Wait for server and fetch OpenAPI
+          $maxAttempts = 30
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:8787/specification" -UseBasicParsing -ErrorAction Stop
+              $response.Content | Out-File -FilePath docs/openapi.json -Encoding UTF8
+              Write-Host "OpenAPI specification generated"
+              break
+            } catch {
+              if ($i -eq $maxAttempts) { throw "Wrangler failed to start" }
+              Start-Sleep -Seconds 2
+            }
+          }
+          
+          # Stop Wrangler
+          Stop-Process -Id $wranglerProcess.Id -Force -ErrorAction SilentlyContinue
+          Remove-Item .dev.vars -Force
+          
+          # Run tests and generate coverage
+          npm run test:coverage
+          
+          # Remove sensitive files
+          $filesToRemove = @()
+          if (Test-Path .gitattributes) {
+            Get-Content .gitattributes | ForEach-Object {
+              if ($_ -match '^(.+?)\s+filter=git-crypt') {
+                $filesToRemove += $matches[1]
+              }
+            }
+          }
+          
+          foreach ($file in $filesToRemove) {
+            if (Test-Path $file) {
+              Remove-Item $file -Force
+            }
+          }
+          Remove-Item .gitattributes -Force -ErrorAction SilentlyContinue
+          
+          # Push to public repository
+          git add -A
+          git commit -m "Update for public repository" --allow-empty
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
+          git push public HEAD:main --force
+          
+          # Deploy to GitHub Pages
+          cd ..
+          git clone https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git public
+          cd public
+          
+          # Checkout gh-pages branch
+          git checkout gh-pages 2>$null || git checkout --orphan gh-pages
+          
+          # Clear existing content
+          Get-ChildItem -Force | Where-Object { $_.Name -ne '.git' } | Remove-Item -Recurse -Force
+          
+          # Copy new content
+          Copy-Item -Recurse ../private/coverage .
+          Copy-Item -Recurse ../private/docs/* .
+          
+          # Commit and push
+          git add -A
+          git commit -m "Deploy to GitHub Pages"
+          git push origin gh-pages --force
+          
+          # Cleanup
+          cd $env:TEMP
+          Remove-Item -Recurse -Force $tempDir
