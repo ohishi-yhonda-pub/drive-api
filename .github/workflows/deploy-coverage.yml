@@ -23,8 +23,10 @@ jobs:
           git config --global user.name "GitHub Action"
       
       - name: Setup and Push to Public
-        shell: pwsh
         run: |
+          # Set Git path
+          $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
+          
           # Debug information
           Write-Host "=== Debug Information ==="
           Write-Host "Current directory: $(Get-Location)"
