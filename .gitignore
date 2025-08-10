@@ -35,4 +35,3 @@ coverage
 
 # Generated docs (except pre-created files)
 docs/openapi.json
-docs/api.html
