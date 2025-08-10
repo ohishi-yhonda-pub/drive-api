@@ -104,10 +104,6 @@ jobs:
           if (Test-Path docs) {
             Copy-Item -Recurse docs/* gh-pages/
           }
-          
-          # Create index.html for root
-          $indexHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Google Drive API - Documentation</title><style>body { font-family: Arial, sans-serif; margin: 40px; } h1 { color: #333; } .card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; } a { text-decoration: none; color: #0066cc; } a:hover { text-decoration: underline; }</style></head><body><h1>Google Drive API - Documentation</h1><div class="card"><h2>Test Coverage Report</h2><p>View detailed test coverage metrics and reports</p><a href="./coverage/index.html">View Coverage Report</a></div><div class="card"><h2>API Documentation</h2><p>Interactive Swagger UI documentation for all API endpoints</p><a href="./api.html">View API Documentation</a></div></body></html>'
-          Set-Content -Path "gh-pages/index.html" -Value $indexHtml -Encoding UTF8
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
