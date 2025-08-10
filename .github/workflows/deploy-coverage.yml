@@ -115,7 +115,7 @@ jobs:
       - name: Deploy coverage to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          personal_token: ${{ secrets.PUBLIC_REPO_TOKEN }}
           publish_dir: coverage
           publish_branch: gh-pages
           force_orphan: true
