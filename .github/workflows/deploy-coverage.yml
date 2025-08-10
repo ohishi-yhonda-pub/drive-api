@@ -18,6 +18,7 @@ jobs:
           
       - name: Configure Git
         run: |
+          $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
       
