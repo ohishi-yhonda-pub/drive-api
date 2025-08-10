@@ -14,9 +14,9 @@ jobs:
         shell: bash
         run: |
           # Create temp directory
-          $tempDir = Join-Path $env:TEMP ("deploy-" + (Get-Date -Format "yyyyMMddHHmmss"))
-          New-Item -ItemType Directory -Path $tempDir -Force
-          cd $tempDir
+          tempDir="/tmp/deploy-$(date +%Y%m%d%H%M%S)"
+          mkdir -p "$tempDir"
+          cd "$tempDir"
           
           # Clone private repository
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ohishi-yhonda-org/drive-api.git private
@@ -26,51 +26,46 @@ jobs:
           npm ci
           
           # Copy template for Wrangler
-          if (Test-Path .dev.vars.template) {
-            Copy-Item .dev.vars.template .dev.vars
-          }
+          if [ -f .dev.vars.template ]; then
+            cp .dev.vars.template .dev.vars
+          fi
           
           # Start Wrangler and generate OpenAPI
-          $wranglerProcess = Start-Process -FilePath "npx" -ArgumentList "wrangler", "dev", "--port", "8787", "--local" -PassThru -NoNewWindow
-          Start-Sleep -Seconds 5
+          npx wrangler dev --port 8787 --local &
+          wranglerPID=$!
+          sleep 5
           
           # Wait for server and fetch OpenAPI
-          $maxAttempts = 30
-          for ($i = 1; $i -le $maxAttempts; $i++) {
-            try {
-              $response = Invoke-WebRequest -Uri "http://localhost:8787/specification" -UseBasicParsing -ErrorAction Stop
-              $response.Content | Out-File -FilePath docs/openapi.json -Encoding UTF8
-              Write-Host "OpenAPI specification generated"
+          maxAttempts=30
+          for i in $(seq 1 $maxAttempts); do
+            if curl -s http://localhost:8787/specification > docs/openapi.json; then
+              echo "OpenAPI specification generated"
               break
-            } catch {
-              if ($i -eq $maxAttempts) { throw "Wrangler failed to start" }
-              Start-Sleep -Seconds 2
-            }
-          }
+            fi
+            if [ $i -eq $maxAttempts ]; then
+              echo "Wrangler failed to start"
+              exit 1
+            fi
+            sleep 2
+          done
           
           # Stop Wrangler
-          Stop-Process -Id $wranglerProcess.Id -Force -ErrorAction SilentlyContinue
-          Remove-Item .dev.vars -Force
+          kill $wranglerPID || true
+          rm -f .dev.vars
           
           # Run tests and generate coverage
           npm run test:coverage
           
           # Remove sensitive files
-          $filesToRemove = @()
-          if (Test-Path .gitattributes) {
-            Get-Content .gitattributes | ForEach-Object {
-              if ($_ -match '^(.+?)\s+filter=git-crypt') {
-                $filesToRemove += $matches[1]
-              }
-            }
-          }
-          
-          foreach ($file in $filesToRemove) {
-            if (Test-Path $file) {
-              Remove-Item $file -Force
-            }
-          }
-          Remove-Item .gitattributes -Force -ErrorAction SilentlyContinue
+          if [ -f .gitattributes ]; then
+            while IFS= read -r line; do
+              if [[ $line =~ ^([^[:space:]]+)[[:space:]]+filter=git-crypt ]]; then
+                file="${BASH_REMATCH[1]}"
+                [ -f "$file" ] && rm -f "$file"
+              fi
+            done < .gitattributes
+            rm -f .gitattributes
+          fi
           
           # Push to public repository
           git add -A
@@ -84,14 +79,14 @@ jobs:
           cd public
           
           # Checkout gh-pages branch
-          git checkout gh-pages 2>$null || git checkout --orphan gh-pages
+          git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
           
           # Clear existing content
-          Get-ChildItem -Force | Where-Object { $_.Name -ne '.git' } | Remove-Item -Recurse -Force
+          find . -maxdepth 1 -name .git -prune -o -exec rm -rf {} + 2>/dev/null || true
           
           # Copy new content
-          Copy-Item -Recurse ../private/coverage .
-          Copy-Item -Recurse ../private/docs/* .
+          cp -r ../private/coverage .
+          cp -r ../private/docs/* .
           
           # Commit and push
           git add -A
@@ -99,5 +94,5 @@ jobs:
           git push origin gh-pages --force
           
           # Cleanup
-          cd $env:TEMP
-          Remove-Item -Recurse -Force $tempDir
+          cd /tmp
+          rm -rf "$tempDir"
