@@ -186,7 +186,11 @@ jobs:
           cd public
           
           # Checkout gh-pages branch
-          git checkout gh-pages 2>$null || git checkout --orphan gh-pages
+          try {
+            git checkout gh-pages 2>$null
+          } catch {
+            git checkout --orphan gh-pages
+          }
           
           # Clear existing content
           Get-ChildItem -Force | Where-Object { $_.Name -ne '.git' } | Remove-Item -Recurse -Force
