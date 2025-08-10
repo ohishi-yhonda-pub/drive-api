@@ -28,7 +28,18 @@ jobs:
           # Debug information
           Write-Host "Current directory: $(Get-Location)"
           Write-Host "Directory contents:"
-          Get-ChildItem -Force | Select-Object Name
+          Get-ChildItem -Force | Select-Object Name, Mode
+          
+          # Check if .git directory exists
+          if (Test-Path .git) {
+            Write-Host ".git directory exists"
+          } else {
+            Write-Host ".git directory NOT found - initializing repository"
+            git init
+            git remote add origin https://github.com/ohishi-yhonda-org/drive-api.git
+            git fetch origin
+            git checkout -f main
+          }
           
           # Get list of files marked for encryption in .gitattributes
           $encryptedFiles = @()
