@@ -27,7 +27,7 @@ jobs:
           
           # Clone private repo to temp directory
           $tempDir = Join-Path $env:TEMP ("sync-" + (Get-Date -Format "yyyyMMddHHmmss"))
-          git clone . $tempDir
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ohishi-yhonda-org/drive-api.git $tempDir
           cd $tempDir
           
           # Get list of files to remove from .gitattributes
