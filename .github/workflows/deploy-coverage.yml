@@ -93,14 +93,17 @@ jobs:
       
       - name: Prepare GitHub Pages content
         run: |
-          # Create gh-pages directory
+          # Create gh-pages directory structure
           mkdir gh-pages
+          mkdir gh-pages/coverage
           
-          # Copy coverage report
-          Copy-Item -Recurse coverage/* gh-pages/
+          # Copy coverage report to subdirectory
+          Copy-Item -Recurse coverage/* gh-pages/coverage/
           
-          # Copy API documentation
-          Copy-Item -Recurse docs/* gh-pages/
+          # Copy API documentation to root
+          if (Test-Path docs) {
+            Copy-Item -Recurse docs/* gh-pages/
+          }
           
           # Create index.html for root
           @"
@@ -122,7 +125,7 @@ jobs:
               <div class="card">
                   <h2>📊 Test Coverage Report</h2>
                   <p>View detailed test coverage metrics and reports</p>
-                  <a href="./index.html">View Coverage Report →</a>
+                  <a href="./coverage/index.html">View Coverage Report →</a>
               </div>
               <div class="card">
                   <h2>📚 API Documentation</h2>

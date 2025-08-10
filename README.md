@@ -120,7 +120,12 @@ test/
 ### 📊 テストカバレッジレポート
 
 最新のテストカバレッジレポートは以下で確認できます：
-**[https://ohishi-yhonda-pub.github.io/drive-api/](https://ohishi-yhonda-pub.github.io/drive-api/)**
+**[https://ohishi-yhonda-pub.github.io/drive-api/coverage/](https://ohishi-yhonda-pub.github.io/drive-api/coverage/)**
+
+### 📚 API ドキュメント
+
+Swagger UI による API ドキュメントは以下で確認できます：
+**[https://ohishi-yhonda-pub.github.io/drive-api/api.html](https://ohishi-yhonda-pub.github.io/drive-api/api.html)**
 
 ## 🔐 セキュリティ
 
