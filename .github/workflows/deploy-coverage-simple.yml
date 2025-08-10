@@ -1,4 +1,4 @@
-name: Sync and Deploy (Simple)
+name: Generate Docs and Deploy
 
 on:
   push:
@@ -7,40 +7,97 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync-and-deploy:
+  generate-and-deploy:
     runs-on: [self-hosted, Windows, X64, test]
     steps:
-      # Sync private to public repository
-      - name: Sync to public repository
-        uses: ./.github/actions/sync-to-public
-        with:
-          private-repo: ohishi-yhonda-org/drive-api
-          public-repo: ohishi-yhonda-pub/drive-api
-          private-token: ${{ secrets.GITHUB_TOKEN }}
-          public-token: ${{ secrets.PUBLIC_REPO_TOKEN }}
-
-      # Checkout public repository
-      - name: Checkout public repository
-        uses: actions/checkout@v4
-        with:
-          repository: ohishi-yhonda-pub/drive-api
-          token: ${{ secrets.PUBLIC_REPO_TOKEN }}
-
-      # Generate API documentation
-      - name: Generate API documentation
-        uses: ./.github/actions/generate-docs-with-wrangler
-
-      # Run tests and generate coverage
-      - name: Run tests with coverage
-        run: npm run test:coverage
-
-      # Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          personal_token: ${{ secrets.PUBLIC_REPO_TOKEN }}
-          publish_dir: .
-          publish_branch: gh-pages
-          force_orphan: true
-          external_repository: ohishi-yhonda-pub/drive-api
-          exclude_assets: '.github,node_modules,src,test,*.json,*.js,*.ts,*.md'
+      - name: Process and Deploy
+        shell: pwsh
+        run: |
+          # Create temp directory
+          $tempDir = Join-Path $env:TEMP ("deploy-" + (Get-Date -Format "yyyyMMddHHmmss"))
+          New-Item -ItemType Directory -Path $tempDir -Force
+          cd $tempDir
+          
+          # Clone private repository
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ohishi-yhonda-org/drive-api.git private
+          cd private
+          
+          # Install dependencies
+          npm ci
+          
+          # Copy template for Wrangler
+          if (Test-Path .dev.vars.template) {
+            Copy-Item .dev.vars.template .dev.vars
+          }
+          
+          # Start Wrangler and generate OpenAPI
+          $wranglerProcess = Start-Process -FilePath "npx" -ArgumentList "wrangler", "dev", "--port", "8787", "--local" -PassThru -NoNewWindow
+          Start-Sleep -Seconds 5
+          
+          # Wait for server and fetch OpenAPI
+          $maxAttempts = 30
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:8787/specification" -UseBasicParsing -ErrorAction Stop
+              $response.Content | Out-File -FilePath docs/openapi.json -Encoding UTF8
+              Write-Host "OpenAPI specification generated"
+              break
+            } catch {
+              if ($i -eq $maxAttempts) { throw "Wrangler failed to start" }
+              Start-Sleep -Seconds 2
+            }
+          }
+          
+          # Stop Wrangler
+          Stop-Process -Id $wranglerProcess.Id -Force -ErrorAction SilentlyContinue
+          Remove-Item .dev.vars -Force
+          
+          # Run tests and generate coverage
+          npm run test:coverage
+          
+          # Remove sensitive files
+          $filesToRemove = @()
+          if (Test-Path .gitattributes) {
+            Get-Content .gitattributes | ForEach-Object {
+              if ($_ -match '^(.+?)\s+filter=git-crypt') {
+                $filesToRemove += $matches[1]
+              }
+            }
+          }
+          
+          foreach ($file in $filesToRemove) {
+            if (Test-Path $file) {
+              Remove-Item $file -Force
+            }
+          }
+          Remove-Item .gitattributes -Force -ErrorAction SilentlyContinue
+          
+          # Push to public repository
+          git add -A
+          git commit -m "Update for public repository" --allow-empty
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
+          git push public HEAD:main --force
+          
+          # Deploy to GitHub Pages
+          cd ..
+          git clone https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git public
+          cd public
+          
+          # Checkout gh-pages branch
+          git checkout gh-pages 2>$null || git checkout --orphan gh-pages
+          
+          # Clear existing content
+          Get-ChildItem -Force | Where-Object { $_.Name -ne '.git' } | Remove-Item -Recurse -Force
+          
+          # Copy new content
+          Copy-Item -Recurse ../private/coverage .
+          Copy-Item -Recurse ../private/docs/* .
+          
+          # Commit and push
+          git add -A
+          git commit -m "Deploy to GitHub Pages"
+          git push origin gh-pages --force
+          
+          # Cleanup
+          cd $env:TEMP
+          Remove-Item -Recurse -Force $tempDir
