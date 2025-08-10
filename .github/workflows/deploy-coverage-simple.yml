@@ -158,7 +158,7 @@ jobs:
           }
           
           # Stop Wrangler
-          Stop-Job -Job $wranglerJob -Force -ErrorAction SilentlyContinue
+          Stop-Job -Job $wranglerJob -ErrorAction SilentlyContinue
           Remove-Job -Job $wranglerJob -Force -ErrorAction SilentlyContinue
           Start-Sleep -Seconds 2
           Remove-Item .dev.vars -Force -ErrorAction SilentlyContinue
