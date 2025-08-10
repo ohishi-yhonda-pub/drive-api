@@ -16,16 +16,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
       
-      - name: Setup Git
-        run: |
-          $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-      
-      - name: Remove sensitive files and push to public
+      - name: Setup Git and Push to Public
         run: |
           # Set Git path
           $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
+          
+          # Configure git
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          
+          # Debug information
+          Write-Host "Current directory: $(Get-Location)"
+          Write-Host "Directory contents:"
+          Get-ChildItem -Force | Select-Object Name
           
           # Get list of files marked for encryption in .gitattributes
           $encryptedFiles = @()
@@ -35,33 +38,46 @@ jobs:
                 $encryptedFiles += $matches[1]
               }
             }
+            Write-Host "Files to be removed: $($encryptedFiles -join ', ')"
           }
           
-          # Create a new branch for public repository
-          git checkout -b public-main
-          
-          # Remove encrypted files and .gitattributes
-          foreach ($file in $encryptedFiles) {
-            if (Test-Path $file) {
-              git rm $file -f 2>$null
-            }
-          }
-          git rm .gitattributes -f 2>$null
-          
-          # Commit the removal
-          try {
-            git commit -m "Remove sensitive files for public repository"
-          } catch {
-            echo "No changes to commit"
-          }
-          
-          # Add public remote and push
-          try {
-            git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
-          } catch {
+          # Add public remote
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git -f 2>$null
+          if ($LASTEXITCODE -ne 0) {
             git remote set-url public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
           }
-          git push public public-main:main --force
+          
+          # Create temporary branch
+          git checkout -b temp-public-sync
+          
+          # Remove sensitive files
+          foreach ($file in $encryptedFiles) {
+            if (Test-Path $file) {
+              Remove-Item $file -Force
+              Write-Host "Removed: $file"
+            }
+          }
+          
+          # Remove .gitattributes
+          if (Test-Path .gitattributes) {
+            Remove-Item .gitattributes -Force
+            Write-Host "Removed: .gitattributes"
+          }
+          
+          # Stage all changes
+          git add -A
+          
+          # Commit if there are changes
+          $changes = git status --porcelain
+          if ($changes) {
+            git commit -m "Remove sensitive files for public repository"
+          } else {
+            Write-Host "No changes to commit"
+          }
+          
+          # Push to public repository
+          git push public temp-public-sync:main --force
+          Write-Host "Successfully pushed to public repository"
 
   deploy-coverage:
     needs: sync-to-public
@@ -78,16 +94,18 @@ jobs:
           $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
+      
       - name : set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          
       - name: Install dependencies
         run: npm install
+        
       - name: Run tests and generate coverage
         run: npm run test:coverage
       
-
       - name: Deploy coverage to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
