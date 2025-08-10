@@ -10,13 +10,8 @@ jobs:
   generate-and-deploy:
     runs-on: [self-hosted, Windows, X64, test]
     steps:
-      - name: Checkout repository  
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
       - name: Deploy Drive API
-        uses: ./.github/actions/drive-api-deploy
+        uses: ohishi-yhonda-org/drive-api-deploy-action@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           public-repo-token: ${{ secrets.PUBLIC_REPO_TOKEN }}
