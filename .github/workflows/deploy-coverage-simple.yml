@@ -136,7 +136,11 @@ jobs:
           }
           
           # Start Wrangler and generate OpenAPI
-          $wranglerProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npx wrangler dev --port 8787 --local" -WorkingDirectory (Get-Location) -PassThru -NoNewWindow
+          $wranglerJob = Start-Job -ScriptBlock {
+            param($workDir)
+            Set-Location $workDir
+            npx wrangler dev --port 8787 --local
+          } -ArgumentList (Get-Location).Path
           Start-Sleep -Seconds 5
           
           # Wait for server and fetch OpenAPI
@@ -154,7 +158,8 @@ jobs:
           }
           
           # Stop Wrangler
-          Stop-Process -Id $wranglerProcess.Id -Force -ErrorAction SilentlyContinue
+          Stop-Job -Job $wranglerJob -Force -ErrorAction SilentlyContinue
+          Remove-Job -Job $wranglerJob -Force -ErrorAction SilentlyContinue
           Start-Sleep -Seconds 2
           Remove-Item .dev.vars -Force -ErrorAction SilentlyContinue
           
