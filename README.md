@@ -120,7 +120,7 @@ test/
 ### 📊 テストカバレッジレポート
 
 最新のテストカバレッジレポートは以下で確認できます：
-**[https://ohishi-yhonda-org.github.io/drive-api/](https://ohishi-yhonda-org.github.io/drive-api/)**
+**[https://ohishi-yhonda-pub.github.io/drive-api/](https://ohishi-yhonda-pub.github.io/drive-api/)**
 
 ## 🔐 セキュリティ
 
