@@ -88,8 +88,95 @@ jobs:
       - name: Run tests and generate coverage
         run: npm run test:coverage
         
-      - name: Generate API documentation
-        run: npm run generate:docs
+      - name: Generate API documentation from Wrangler
+        run: |
+          # Copy template file for Wrangler
+          Copy-Item .dev.vars.template .dev.vars
+          
+          # Start Wrangler in background
+          Start-Job -ScriptBlock {
+            npx wrangler dev --port 8787 --local
+          }
+          
+          # Wait for server to start
+          $maxAttempts = 30
+          $attempt = 0
+          while ($attempt -lt $maxAttempts) {
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:8787" -UseBasicParsing -ErrorAction Stop
+              if ($response.StatusCode -eq 200) {
+                Write-Host "Wrangler server is ready!"
+                break
+              }
+            } catch {
+              Write-Host "Waiting for server... (attempt $($attempt + 1)/$maxAttempts)"
+            }
+            Start-Sleep -Seconds 2
+            $attempt++
+          }
+          
+          if ($attempt -eq $maxAttempts) {
+            Write-Error "Wrangler server failed to start"
+            exit 1
+          }
+          
+          # Fetch OpenAPI specification
+          Write-Host "Fetching OpenAPI specification..."
+          $openApiResponse = Invoke-WebRequest -Uri "http://localhost:8787/specification" -UseBasicParsing
+          $openApiJson = $openApiResponse.Content
+          
+          # Create docs directory
+          New-Item -ItemType Directory -Force -Path docs
+          
+          # Save OpenAPI spec
+          $openApiJson | Out-File -FilePath docs/openapi.json -Encoding UTF8
+          
+          # Create Swagger UI HTML
+          @'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Google Drive API - Documentation</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      window.ui = SwaggerUIBundle({
+        url: './openapi.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout"
+      });
+    };
+  </script>
+</body>
+</html>
+'@ | Out-File -FilePath docs/api.html -Encoding UTF8
+          
+          # Clean up
+          Remove-Item .dev.vars
+          Get-Job | Stop-Job
+          Get-Job | Remove-Job
+          
+          Write-Host "API documentation generated successfully!"
       
       - name: Prepare GitHub Pages content
         run: |

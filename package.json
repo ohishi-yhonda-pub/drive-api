@@ -19,8 +19,7 @@
     "test:coverage:upload-max": "node --max-old-space-size=8192 --expose-gc ./node_modules/vitest/vitest.mjs run --coverage test/unit/upload.unit.test.ts -t \"should upload file successfully|should validate custom folder ID|should handle overwrite with existing file|should handle upload API failure\"",
     "test:unit": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run test/unit",
     "test:integration": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run test/integration",
-    "test:e2e": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run test/crud.test.js",
-    "generate:docs": "node scripts/generate-openapi.js"
+    "test:e2e": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run test/crud.test.js"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",
