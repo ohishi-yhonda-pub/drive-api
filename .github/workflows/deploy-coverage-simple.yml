@@ -37,7 +37,7 @@ jobs:
           cd private
           
           # Install dependencies
-          npm ci
+          npm install
           
           # Copy template for Wrangler
           if [ -f .dev.vars.template ]; then
@@ -128,7 +128,7 @@ jobs:
           cd private
           
           # Install dependencies
-          npm ci
+          npm install
           
           # Copy template for Wrangler
           if (Test-Path .dev.vars.template) {
@@ -136,7 +136,7 @@ jobs:
           }
           
           # Start Wrangler and generate OpenAPI
-          $wranglerProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npx wrangler dev --port 8787 --local" -PassThru -NoNewWindow
+          $wranglerProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npx wrangler dev --port 8787 --local" -WorkingDirectory (Get-Location) -PassThru -NoNewWindow
           Start-Sleep -Seconds 5
           
           # Wait for server and fetch OpenAPI
