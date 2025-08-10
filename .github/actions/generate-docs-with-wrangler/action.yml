@@ -1,0 +1,69 @@
+name: 'Generate API Documentation with Wrangler'
+description: 'Start Wrangler dev server and extract OpenAPI specification'
+inputs:
+  wrangler-port:
+    description: 'Port for Wrangler dev server'
+    required: false
+    default: '8787'
+  docs-directory:
+    description: 'Directory to save documentation'
+    required: false
+    default: 'docs'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Create dev vars from template
+      shell: bash
+      run: |
+        if [ -f .dev.vars.template ]; then
+          cp .dev.vars.template .dev.vars
+        fi
+
+    - name: Generate OpenAPI documentation
+      shell: bash
+      run: |
+        # Start Wrangler in background
+        npx wrangler dev --port ${{ inputs.wrangler-port }} --local &
+        WRANGLER_PID=$!
+        
+        # Wait for server to start
+        echo "Waiting for Wrangler to start..."
+        for i in {1..30}; do
+          if curl -s http://localhost:${{ inputs.wrangler-port }} > /dev/null; then
+            echo "Wrangler is ready!"
+            break
+          fi
+          echo "Attempt $i/30..."
+          sleep 2
+        done
+        
+        # Fetch OpenAPI specification
+        echo "Fetching OpenAPI specification..."
+        curl -s http://localhost:${{ inputs.wrangler-port }}/specification > ${{ inputs.docs-directory }}/openapi.json
+        
+        # Kill Wrangler
+        kill $WRANGLER_PID || true
+        
+        # Clean up
+        rm -f .dev.vars
+
+    - name: Verify generation
+      shell: bash
+      run: |
+        if [ -f ${{ inputs.docs-directory }}/openapi.json ]; then
+          echo "✅ OpenAPI specification generated successfully"
+          echo "File size: $(wc -c < ${{ inputs.docs-directory }}/openapi.json) bytes"
+        else
+          echo "❌ Failed to generate OpenAPI specification"
+          exit 1
+        fi

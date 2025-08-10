@@ -1,0 +1,66 @@
+name: 'Sync Private to Public Repository'
+description: 'Sync private repository to public, removing sensitive files defined in .gitattributes'
+inputs:
+  private-repo:
+    description: 'Private repository (format: owner/repo)'
+    required: true
+  public-repo:
+    description: 'Public repository (format: owner/repo)'
+    required: true
+  private-token:
+    description: 'Token for private repository access'
+    required: true
+    default: ${{ github.token }}
+  public-token:
+    description: 'Token for public repository access'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout private repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.private-repo }}
+        token: ${{ inputs.private-token }}
+        path: private-repo
+        fetch-depth: 0
+
+    - name: Process and sync to public
+      shell: bash
+      run: |
+        cd private-repo
+        
+        # Configure git
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        
+        # Get files marked for encryption from .gitattributes
+        if [ -f .gitattributes ]; then
+          echo "Reading .gitattributes..."
+          ENCRYPTED_FILES=$(grep "filter=git-crypt" .gitattributes | awk '{print $1}')
+          
+          # Remove encrypted files
+          for file in $ENCRYPTED_FILES; do
+            if [ -f "$file" ]; then
+              rm -f "$file"
+              echo "Removed: $file"
+            fi
+          done
+          
+          # Remove .gitattributes itself
+          rm -f .gitattributes
+          echo "Removed: .gitattributes"
+        fi
+        
+        # Commit changes
+        git add -A
+        git commit -m "Remove sensitive files for public repository" --allow-empty
+        
+        # Add public remote and push
+        git remote add public https://x-access-token:${{ inputs.public-token }}@github.com/${{ inputs.public-repo }}.git
+        git push public HEAD:main --force
+
+    - name: Cleanup
+      shell: bash
+      run: rm -rf private-repo

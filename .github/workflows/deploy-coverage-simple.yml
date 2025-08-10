@@ -1,0 +1,46 @@
+name: Sync and Deploy (Simple)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sync-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Sync private to public repository
+      - name: Sync to public repository
+        uses: ./.github/actions/sync-to-public
+        with:
+          private-repo: ohishi-yhonda-org/drive-api
+          public-repo: ohishi-yhonda-pub/drive-api
+          private-token: ${{ secrets.GITHUB_TOKEN }}
+          public-token: ${{ secrets.PUBLIC_REPO_TOKEN }}
+
+      # Checkout public repository
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+        with:
+          repository: ohishi-yhonda-pub/drive-api
+          token: ${{ secrets.PUBLIC_REPO_TOKEN }}
+
+      # Generate API documentation
+      - name: Generate API documentation
+        uses: ./.github/actions/generate-docs-with-wrangler
+
+      # Run tests and generate coverage
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          force_orphan: true
+          external_repository: ohishi-yhonda-pub/drive-api
+          exclude_assets: '.github,node_modules,src,test,*.json,*.js,*.ts,*.md'
