@@ -24,9 +24,12 @@ jobs:
       
       - name: Remove sensitive files and push to public
         run: |
+          # Use full path to Git
+          $git = "C:\Program Files\Git\cmd\git.exe"
+          
           # Clone to temporary directory to preserve commit history
           $tempDir = New-TemporaryFile | %{ rm $_; mkdir $_ }
-          git clone . $tempDir
+          & $git clone . $tempDir
           cd $tempDir
           
           # Get list of files marked for encryption in .gitattributes
@@ -40,7 +43,7 @@ jobs:
           }
           
           # Remove encrypted files from all commits
-          $filterCommand = "git filter-branch --force --index-filter '"
+          $filterCommand = "& '$git' filter-branch --force --index-filter '"
           foreach ($file in $encryptedFiles) {
             $filterCommand += "git rm --cached --ignore-unmatch $file; "
           }
@@ -50,8 +53,8 @@ jobs:
           Invoke-Expression $filterCommand
           
           # Add public remote and push
-          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
-          git push public main --force
+          & $git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
+          & $git push public main --force
           
           # Cleanup
           cd ..
