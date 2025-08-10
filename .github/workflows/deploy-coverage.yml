@@ -15,21 +15,24 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-      
-      - name: Setup Git and Push to Public
-        run: |
-          # Set Git path
-          $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
           
-          # Configure git
+      - name: Configure Git
+        run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          
+      
+      - name: Setup and Push to Public
+        shell: pwsh
+        run: |
           # Debug information
+          Write-Host "=== Debug Information ==="
           Write-Host "Current directory: $(Get-Location)"
+          Write-Host "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
           Write-Host "Directory contents:"
-          Get-ChildItem -Force | Select-Object Name, Mode
+          Get-ChildItem -Force | Format-Table Name, Mode
           
+          # Check git repository
+          git status
           
           # Get list of files marked for encryption in .gitattributes
           $encryptedFiles = @()
@@ -43,7 +46,7 @@ jobs:
           }
           
           # Add public remote
-          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git -f 2>$null
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git 2>&1
           if ($LASTEXITCODE -ne 0) {
             git remote set-url public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
           }
@@ -77,11 +80,11 @@ jobs:
           }
           
           # Push to public repository
-          try {
-            git push public temp-public-sync:main --force
+          git push public temp-public-sync:main --force 2>&1
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "Successfully pushed to public repository"
-          } catch {
-            Write-Host "Push failed: $_"
+          } else {
+            Write-Host "Push failed with exit code: $LASTEXITCODE"
             exit 1
           }
 
