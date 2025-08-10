@@ -155,7 +155,8 @@ jobs:
           
           # Stop Wrangler
           Stop-Process -Id $wranglerProcess.Id -Force -ErrorAction SilentlyContinue
-          Remove-Item .dev.vars -Force
+          Start-Sleep -Seconds 2
+          Remove-Item .dev.vars -Force -ErrorAction SilentlyContinue
           
           # Run tests and generate coverage
           npm run test:coverage
@@ -209,4 +210,5 @@ jobs:
           
           # Cleanup
           cd $env:TEMP
-          Remove-Item -Recurse -Force $tempDir
+          Start-Sleep -Seconds 3
+          Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
