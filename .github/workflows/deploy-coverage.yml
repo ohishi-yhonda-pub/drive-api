@@ -87,12 +87,57 @@ jobs:
         
       - name: Run tests and generate coverage
         run: npm run test:coverage
+        
+      - name: Generate API documentation
+        run: npm run generate:docs
       
-      - name: Deploy coverage to GitHub Pages
+      - name: Prepare GitHub Pages content
+        run: |
+          # Create gh-pages directory
+          mkdir gh-pages
+          
+          # Copy coverage report
+          Copy-Item -Recurse coverage/* gh-pages/
+          
+          # Copy API documentation
+          Copy-Item -Recurse docs/* gh-pages/
+          
+          # Create index.html for root
+          @"
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="UTF-8">
+              <title>Google Drive API - Documentation</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  h1 { color: #333; }
+                  .card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+                  a { text-decoration: none; color: #0066cc; }
+                  a:hover { text-decoration: underline; }
+              </style>
+          </head>
+          <body>
+              <h1>Google Drive API - Documentation</h1>
+              <div class="card">
+                  <h2>📊 Test Coverage Report</h2>
+                  <p>View detailed test coverage metrics and reports</p>
+                  <a href="./index.html">View Coverage Report →</a>
+              </div>
+              <div class="card">
+                  <h2>📚 API Documentation</h2>
+                  <p>Interactive Swagger UI documentation for all API endpoints</p>
+                  <a href="./api.html">View API Documentation →</a>
+              </div>
+          </body>
+          </html>
+          "@ | Out-File -FilePath gh-pages/index.html -Encoding UTF8
+      
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.PUBLIC_REPO_TOKEN }}
-          publish_dir: coverage
+          publish_dir: gh-pages
           publish_branch: gh-pages
           force_orphan: true
           external_repository: ohishi-yhonda-pub/drive-api
