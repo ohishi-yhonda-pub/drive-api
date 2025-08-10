@@ -46,10 +46,18 @@ jobs:
           git rm .gitattributes -f 2>$null
           
           # Commit the removal
-          git commit -m "Remove sensitive files for public repository" 2>$null || echo "No changes to commit"
+          try {
+            git commit -m "Remove sensitive files for public repository"
+          } catch {
+            echo "No changes to commit"
+          }
           
           # Add public remote and push
-          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git 2>$null || git remote set-url public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
+          try {
+            git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
+          } catch {
+            git remote set-url public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/ohishi-yhonda-pub/drive-api.git
+          }
           git push public public-main:main --force
 
   deploy-coverage:
