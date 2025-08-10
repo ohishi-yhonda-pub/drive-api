@@ -148,6 +148,20 @@ jobs:
           # Save OpenAPI spec
           $openApiJson | Out-File -FilePath docs/openapi.json -Encoding UTF8
           
+          # Verify files were created
+          Write-Host "Checking generated files..."
+          if (Test-Path docs/openapi.json) {
+            $fileInfo = Get-Item docs/openapi.json
+            Write-Host "openapi.json created successfully - Size: $($fileInfo.Length) bytes"
+            Write-Host "First 500 characters of openapi.json:"
+            Get-Content docs/openapi.json -TotalCount 10
+          } else {
+            Write-Host "ERROR: openapi.json was NOT created!"
+          }
+          
+          Write-Host "Listing docs directory contents:"
+          Get-ChildItem docs
+          
           # Clean up
           Remove-Item .dev.vars
           Stop-Process -Id $wranglerProcess.Id -Force -ErrorAction SilentlyContinue
