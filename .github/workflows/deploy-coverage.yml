@@ -24,6 +24,9 @@ jobs:
       
       - name: Remove sensitive files and push to public
         run: |
+          # Set Git path
+          $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
+          
           # Get list of files marked for encryption in .gitattributes
           $encryptedFiles = @()
           if (Test-Path .gitattributes) {
