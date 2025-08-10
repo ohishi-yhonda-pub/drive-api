@@ -93,16 +93,30 @@ jobs:
           # Copy template file for Wrangler
           Copy-Item .dev.vars.template .dev.vars
           
-          # Start Wrangler in background
-          Start-Job -ScriptBlock {
-            npx wrangler dev --port 8787 --local
+          # Install dependencies if not already installed
+          if (!(Test-Path node_modules)) {
+            npm install
           }
+          
+          # Start Wrangler directly (not in background)
+          $wranglerProcess = Start-Process -FilePath "npx" -ArgumentList "wrangler", "dev", "--port", "8787", "--local" -PassThru -NoNewWindow -RedirectStandardOutput "wrangler.log" -RedirectStandardError "wrangler-error.log"
+          
+          # Give Wrangler time to start
+          Start-Sleep -Seconds 5
           
           # Wait for server to start
           $maxAttempts = 30
           $attempt = 0
           while ($attempt -lt $maxAttempts) {
             try {
+              # Check if process is still running
+              if ($wranglerProcess.HasExited) {
+                Write-Host "Wrangler process exited unexpectedly"
+                Get-Content wrangler.log
+                Get-Content wrangler-error.log
+                exit 1
+              }
+              
               $response = Invoke-WebRequest -Uri "http://localhost:8787" -UseBasicParsing -ErrorAction Stop
               if ($response.StatusCode -eq 200) {
                 Write-Host "Wrangler server is ready!"
@@ -117,6 +131,9 @@ jobs:
           
           if ($attempt -eq $maxAttempts) {
             Write-Error "Wrangler server failed to start"
+            Get-Content wrangler.log
+            Get-Content wrangler-error.log
+            Stop-Process -Id $wranglerProcess.Id -Force
             exit 1
           }
           
@@ -133,8 +150,9 @@ jobs:
           
           # Clean up
           Remove-Item .dev.vars
-          Get-Job | Stop-Job
-          Get-Job | Remove-Job
+          Stop-Process -Id $wranglerProcess.Id -Force -ErrorAction SilentlyContinue
+          Remove-Item wrangler.log -Force -ErrorAction SilentlyContinue
+          Remove-Item wrangler-error.log -Force -ErrorAction SilentlyContinue
           
           Write-Host "API documentation generated successfully!"
       
